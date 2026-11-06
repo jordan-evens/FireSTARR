@@ -65,8 +65,8 @@ HorizontalAdjustment horizontal_adjustment(const AspectSize slope_azimuth, const
       ros,
       Direction{direction},
       Offset{
-        static_cast<XYSize>(RoundedValue{ros_cell * sin(direction)}.value),
-        static_cast<XYSize>(RoundedValue{ros_cell * cos(direction)}.value)
+        as_value(static_cast<XYSize>(RoundedValue{ros_cell * sin(direction)})),
+        as_value(static_cast<XYSize>(RoundedValue{ros_cell * cos(direction)}))
       }
     );
     return true;
@@ -171,8 +171,8 @@ HorizontalAdjustment horizontal_adjustment(const AspectSize slope_azimuth, const
       ros,
       Direction{direction},
       Offset{
-        static_cast<XYSize>(RoundedValue{ros_cell * sin(direction)}.value),
-        static_cast<XYSize>(RoundedValue{ros_cell * cos(direction)}.value)
+        as_value(static_cast<XYSize>(RoundedValue{ros_cell * sin(direction)})),
+        as_value(static_cast<XYSize>(RoundedValue{ros_cell * cos(direction)}))
       }
     );
 #ifdef DEBUG_POINTS
@@ -241,7 +241,7 @@ HorizontalAdjustment horizontal_adjustment(const AspectSize slope_azimuth, const
   // size_t num_angles = 0;
   MathSize widest_x = cos(widest);
   Radians step_max{STEP_MAX / pow(length_to_breadth, 0.5)};
-  while (added && cur_x > (STEP_MAX / 4.0).value)
+  while (added && cur_x > as_value(STEP_MAX / 4.0))
   {
     // ++num_angles;
     theta = min(Radians{acos(cur_x)}, last_theta + step_max);
@@ -273,7 +273,7 @@ HorizontalAdjustment horizontal_adjustment(const AspectSize slope_azimuth, const
   }
   cur_x -= (step_x / 2.0);
   step_x *= length_to_breadth;
-  Radians max_angle{Radians::D_180() - (length_to_breadth.value * step_max)};
+  Radians max_angle{Radians::D_180() - (as_value(length_to_breadth) * step_max)};
   MathSize min_x = cos(max_angle);
   while (added && cur_x >= min_x)
   {
@@ -303,7 +303,7 @@ HorizontalAdjustment horizontal_adjustment(const AspectSize slope_azimuth, const
   if (head_ros >= min_ros_)
   {
     logging::check_fatal(
-      offsets.empty(), "Empty when ros of {:f} >= {:f}", head_ros.value, min_ros_
+      offsets.empty(), "Empty when ros of {:f} >= {:f}", as_value(head_ros), min_ros_
     );
   }
 #endif

@@ -107,7 +107,7 @@ MathSize StandardFuel::crownConsumption(const RoundedValue& cfb) const noexcept
 }
 [[nodiscard]] MathSize StandardFuel::lengthToBreadth(const RoundedValue& ws) const noexcept
 {
-  return calculate_standard_length_to_breadth(ws.value);
+  return calculate_standard_length_to_breadth(as_value(ws));
 }
 MathSize StandardFuel::finalRos(
   const SpreadInfo&,
@@ -120,7 +120,7 @@ MathSize StandardFuel::finalRos(
 }
 [[nodiscard]] MathSize StandardFuel::buiEffect(const RoundedValue& bui) const noexcept
 {
-  return (0 < bui) ? exp(50.0 * log_q_.value * ((1.0 / bui) - (1.0 / bui0()))) : 1.0;
+  return (0 < bui) ? exp(50.0 * as_value(log_q_) * ((1.0 / bui) - (1.0 / bui0()))) : 1.0;
 }
 [[nodiscard]] MathSize StandardFuel::bui0() const noexcept { return bui0_; }
 [[nodiscard]] MathSize StandardFuel::cbh() const { return cbh_; }
@@ -138,8 +138,8 @@ MathSize StandardFuel::finalRos(
 ) noexcept
 {
   // HACK: convert back to double to instantiate as LookupValue
-  return calculate_standard_foliar_moisture_isi(isi.value)
-       * calculate_standard_foliar_moisture_fmc(fmc.value);
+  return calculate_standard_foliar_moisture_isi(as_value(isi))
+       * calculate_standard_foliar_moisture_fmc(as_value(fmc));
 }
-[[nodiscard]] MathSize StandardFuel::logQ() const noexcept { return log_q_.value; }
+[[nodiscard]] MathSize StandardFuel::logQ() const noexcept { return as_value(log_q_); }
 }

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #ifndef FS_UNSTABLE_H
 #define FS_UNSTABLE_H
+#include <concepts>
 #include <stdexcept>
 #define CHECK_ROUNDING 1
 // #undef CHECK_ROUNDING
@@ -50,6 +51,53 @@ static_assert(8 == sizeof(_Float64), "Could not determine 64-bit float type");
 // Type used for math operations
 using MathSize = _Float64;
 using MathConstantSize = _Float64;
+template <typename T>
+concept HasValueFunction = requires(const T& t) {
+  { t.value() } -> std::convertible_to<MathSize>;
+};
+template <typename T>
+concept HasValue = requires(const T& t) {
+  { t.value } -> std::convertible_to<fs::MathSize>;
+};
+template <typename T>
+concept IsValue = requires(const T& t) {
+  { t } -> std::convertible_to<MathSize>;
+};
+template <typename T>
+concept IsFunction = requires(const T& t) {
+  { t() } -> std::convertible_to<MathSize>;
+};
+template <class T>
+  requires HasValueFunction<T>
+constexpr MathSize as_value(const T& t)
+{
+  return t.value();
+}
+template <class T>
+  requires HasValue<T>
+constexpr MathSize as_value(const T& t)
+{
+  return t.value;
+}
+template <class T>
+  requires IsValue<T>
+constexpr MathSize as_value(const T& t)
+{
+  return t;
+}
+// if both then use .value
+template <class T>
+  requires IsValue<T> && HasValue<T>
+constexpr MathSize as_value(const T& t)
+{
+  return t.value;
+}
+template <class T>
+  requires IsFunction<T>
+constexpr MathSize as_value(const T& t)
+{
+  return t();
+}
 /**
  * \brief Return base raised to the power N
  * \tparam N Power to raise to
@@ -201,16 +249,16 @@ public:
     return inf;
   }
   // HACK: force rounding again
-  constexpr PreciseValue(const precise_type& rhs) noexcept : PreciseValue(rhs.value) { }
-  constexpr PreciseValue(precise_type&& rhs) noexcept : PreciseValue(rhs.value) { }
+  constexpr PreciseValue(const precise_type& rhs) noexcept : PreciseValue(as_value(rhs)) { }
+  constexpr PreciseValue(precise_type&& rhs) noexcept : PreciseValue(as_value(rhs)) { }
   PreciseValue& operator=(const precise_type& rhs) noexcept
   {
-    value = round_value(rhs.value);
+    value = round_value(as_value(rhs));
     return *this;
   }
   PreciseValue& operator=(precise_type&& rhs) noexcept
   {
-    value = round_value(rhs.value);
+    value = round_value(as_value(rhs));
     return *this;
   }
   PreciseValue(const MathSize& v) noexcept : PreciseValue(v, true) { }

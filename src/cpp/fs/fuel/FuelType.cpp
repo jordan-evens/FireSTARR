@@ -58,7 +58,7 @@ RoundedIntensity fire_intensity(const RoundedValue& fc, const RoundedValue& ros)
   const RoundedIntensity& csi
 )
 {
-  return sfc > 0 ? csi.value / (300.0 * sfc.value) : 0.0;
+  return sfc > 0 ? as_value(csi) / (300.0 * as_value(sfc)) : 0.0;
 }
 [[nodiscard]] bool FuelType::isCrown(const RoundedIntensity& csi, const RoundedIntensity& sfi)
 {

@@ -74,7 +74,7 @@ RoundedValue SpreadInfo::initial(
   // needs to be non-const so that we can update if slopeEffect changes direction
   auto raz = spread.weather.wind().heading();
   const auto isz = 0.208 * ffmc_effect;
-  wsv = spread.weather.wind().speed.value;
+  wsv = as_value(spread.weather.wind().speed);
   if (!has_no_slope)
   {
     const auto isf1 = fuel->calculateIsf(spread, isz);
@@ -98,11 +98,11 @@ RoundedValue SpreadInfo::initial(
     raz = (0 == wsv) ? 0 : acos(wsv_y / wsv);
     if (wsv_x < 0)
     {
-      raz = Radians::D_360().value - raz;
+      raz = as_value(Radians::D_360()) - raz;
     }
   }
   spread.raz_ = Direction{Radians{raz}};
-  const auto isi = isz * calculate_standard_wsv(wsv.value);
+  const auto isi = isz * calculate_standard_wsv(as_value(wsv));
   // FIX: make this a member function so we don't need to preface head_ros_
   spread.head_ros_ = fuel->calculateRos(spread.nd(), weather, isi) * bui_eff;
   if (min_ros > spread.head_ros_)
@@ -331,7 +331,7 @@ SpreadInfo::SpreadInfo(
     return {sin(heading), cos(heading)};
   }();
   // HACK: only use BUI from hourly weather for both calculations
-  const auto _bui = weather.bui().value;
+  const auto _bui = as_value(weather.bui());
   const auto bui_eff = fuel->buiEffect(_bui);
   // FIX: gets calculated when not necessary sometimes
   const auto critical_surface_intensity = fuel->criticalSurfaceIntensity(*this);
@@ -381,8 +381,8 @@ SpreadInfo::SpreadInfo(
       return;
     }
   }
-  logging::verbose("initial ros is {:f}", head_ros_.value);
-  const auto back_isi = ffmc_effect * calculate_standard_back_isi_wsv(wsv.value);
+  logging::verbose("initial ros is {:f}", as_value(head_ros_));
+  const auto back_isi = ffmc_effect * calculate_standard_back_isi_wsv(as_value(wsv));
   auto back_ros = fuel->calculateRos(nd, weather, back_isi) * bui_eff;
   if (is_crown_)
   {
