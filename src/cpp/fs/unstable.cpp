@@ -22,4 +22,6 @@ void setfperrors()
   // FE_INEXACT happens in stoa()
   fexcept_t excepts{};
   fesetexceptflag(&excepts, FE_DIVBYZERO | FE_UNDERFLOW | FE_OVERFLOW | FE_INVALID);
+  // HACK: set rounding here too
+  fesetround(FE_TONEAREST);
 }
