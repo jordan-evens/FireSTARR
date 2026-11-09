@@ -126,11 +126,14 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           image-missing: ${{ 'true' == steps.check-missing.outputs.image-missing }}
 
+      - run: |
+          find "${{ github.workspace }}"
+
       - name: Upload test outputs artifact
         uses: actions/upload-artifact@v7
         with:
           name: 'test-outputs-${{ env.PLATFORM_PAIR }}'
-          path: test/output
+          path: test/output/reference-cmp
           archive: true
           compression-level: 9
           retention-days: 30

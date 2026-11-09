@@ -163,7 +163,7 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: 'test-outputs-${{ env.RELEASE_ARCHIVE }}'
-        path: test/output
+        path: test/output/reference
         archive: true
         compression-level: 9
         retention-days: 30
