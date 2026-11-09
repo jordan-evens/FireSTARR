@@ -115,6 +115,18 @@ jobs:
           echo "MISSING=${MISSING}" >> $GITHUB_ENV
           echo "image-missing=${MISSING}" >> $GITHUB_OUTPUT
 
+      - name: Pre-build files
+        run: |
+          find "${{ github.workspace }}"
+
+      - name: Remove reference files
+        run: |
+          rm -rfv "${{ github.workspace }}/test/output/reference"
+
+      - name: After remove test files
+        run: |
+          find "${{ github.workspace }}"
+
       - uses: ./.github/actions/docker-build-image
         id: build-firestarr
         with:
@@ -126,14 +138,15 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           image-missing: ${{ 'true' == steps.check-missing.outputs.image-missing }}
 
-      - run: |
+      - name: Post-build files
+        run: |
           find "${{ github.workspace }}"
 
       - name: Upload test outputs artifact
         uses: actions/upload-artifact@v7
         with:
           name: 'test-outputs-${{ env.PLATFORM_PAIR }}'
-          path: test/output/reference-cmp
+          path: test/output/reference
           archive: true
           compression-level: 9
           retention-days: 30
