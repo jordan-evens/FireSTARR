@@ -158,4 +158,4 @@ runs:
       run: |
         echo "package=${{ env.PACKAGE }}" >> $GITHUB_OUTPUT
         echo "cached=${{ env.CACHED }}" >> $GITHUB_OUTPUT
-        echo "image=${{ inputs.target }}:latest" >> $GITHUB_OUTPUT
+        echo "local=${{ inputs.target }}:latest" >> $GITHUB_OUTPUT
