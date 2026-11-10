@@ -36,6 +36,9 @@ outputs:
   cached:
     description: "Cached image"
     value: ${{ steps.output.outputs.cached }}
+  local:
+    description: "Local image"
+    value: ${{ steps.output.outputs.local }}
 
 runs:
   using: "composite"
@@ -143,17 +146,11 @@ runs:
         if-no-files-found: error
         retention-days: 1
 
-    - name: Tag image
+    - name: Build local
       shell: bash
       run: |
-        # this doesn't show what we just built
-        docker image ls -a --digests
         # calling compose should use cached build but tag it?
-        docker compose build firestarr
-        docker image ls firestarr
-        IMAGE=$(docker image ls firestarr | tail -n1 | cut -d' ' -f1)
-        docker tag ${IMAGE} ${{ inputs.target }}:local
-
+        docker compose build ${{ inputs.target }}
 
     - name: Set outputs
       id: output
@@ -161,4 +158,4 @@ runs:
       run: |
         echo "package=${{ env.PACKAGE }}" >> $GITHUB_OUTPUT
         echo "cached=${{ env.CACHED }}" >> $GITHUB_OUTPUT
-        echo "image=${{ inputs.target }}:local" >> $GITHUB_OUTPUT
+        echo "image=${{ inputs.target }}:latest" >> $GITHUB_OUTPUT
