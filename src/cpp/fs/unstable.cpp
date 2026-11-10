@@ -7,21 +7,21 @@ MathSize cos(const MathSize angle) noexcept { return static_cast<MathSize>(std::
 MathSize sin(const MathSize angle) noexcept { return static_cast<MathSize>(std::sin(angle)); }
 MathSize acos(const MathSize angle) noexcept
 {
-  // FIX: change to use RAII
-  std::fenv_t env{};
-  std::feholdexcept(&env);
+  // // FIX: change to use RAII
+  // std::fenv_t env{};
+  // std::feholdexcept(&env);
   const auto v = std::acos(angle);
-  // clear FE_INVALID but not other exceptions
-  std::feclearexcept(FE_INVALID);
-  std::feupdateenv(&env);
+  // // clear FE_INVALID but not other exceptions
+  // std::feclearexcept(FE_INVALID);
+  // std::feupdateenv(&env);
   return v;
 }
 }
 void setfperrors()
 {
-  // FE_INEXACT happens in stoa()
-  fexcept_t excepts{};
-  fesetexceptflag(&excepts, FE_DIVBYZERO | FE_UNDERFLOW | FE_OVERFLOW | FE_INVALID);
+  // // FE_INEXACT happens in stoa()
+  // fexcept_t excepts{};
+  // fesetexceptflag(&excepts, FE_DIVBYZERO | FE_UNDERFLOW | FE_OVERFLOW);
   // HACK: set rounding here too
   fesetround(FE_TONEAREST);
 }
