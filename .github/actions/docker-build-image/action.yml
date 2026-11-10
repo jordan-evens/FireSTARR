@@ -113,9 +113,7 @@ runs:
         target: ${{ inputs.target }}
         platforms: linux/${{ inputs.platform }}
         labels: ${{ steps.meta.outputs.labels }}
-        tags: |
-          ${{ env.PACKAGE }}
-          ${{ inputs.target }}:local
+        tags: ${{ env.PACKAGE }}
         push: ${{ 'true' == inputs.push }}
         outputs: ${{ case( 'true' == inputs.push, 'type=image,push-by-digest=true,name-canonical=true,push=true', '' ) }}
         cache-from: |
@@ -144,6 +142,14 @@ runs:
         path: ${{ runner.temp }}/digests-${{ inputs.target }}/*
         if-no-files-found: error
         retention-days: 1
+
+    - name: Tag image
+      shell: bash
+      run: |
+        docker image ls -a --digests
+        IMAGE=$(docker image ls -a --digests | tail -n1 | cut -d' ' -f3)
+        docker tag ${IMAGE} ${{ inputs.target }}:local
+
 
     - name: Set outputs
       id: output

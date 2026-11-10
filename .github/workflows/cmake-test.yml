@@ -274,3 +274,4 @@ jobs:
           cd compare
           ../repo/cmp_outputs.sh
           ls -lh *.diff
+          [[ "$(cat *.dif | wc -l)" -eq "0" ]] && echo "Comparison worked"

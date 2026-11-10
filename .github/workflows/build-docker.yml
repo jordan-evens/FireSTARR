@@ -139,6 +139,7 @@ jobs:
           image-missing: ${{ 'true' == steps.check-missing.outputs.image-missing }}
 
       - name: Run docker test
+        shell: bash
         run: |
           rm -rf ./test/output/reference
           IMAGE=${{ steps.build-firestarr.outputs.image }}
