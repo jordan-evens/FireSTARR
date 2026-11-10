@@ -146,8 +146,12 @@ runs:
     - name: Tag image
       shell: bash
       run: |
+        # this doesn't show what we just built
         docker image ls -a --digests
-        IMAGE=$(docker image ls -a --digests | tail -n1 | cut -d' ' -f3)
+        # calling compose should use cached build but tag it?
+        docker compose build firestarr
+        docker image ls firestarr
+        IMAGE=$(docker image ls firestarr | tail -n1 | cut -d' ' -f1)
         docker tag ${IMAGE} ${{ inputs.target }}:local
 
 
