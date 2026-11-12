@@ -258,7 +258,7 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v8
         with:
-          name: test-outputs-*
+          name: 'test-outputs-*'
           path: ./compare
           merge-multiple: true
           skip-decompress: true
