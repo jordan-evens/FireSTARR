@@ -21,7 +21,7 @@ jobs:
         variant: [Release]
         include:
           - os: macos
-            os-version: 15
+            os-version: 26
             target-os: osx
           # HACK: latest doesn't work with -arm
           - os: ubuntu
