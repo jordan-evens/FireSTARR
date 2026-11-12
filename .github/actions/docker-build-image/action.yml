@@ -121,6 +121,7 @@ runs:
         platforms: linux/${{ inputs.platform }}
         labels: ${{ steps.meta.outputs.labels }}
         tags: ${{ env.PACKAGE }}
+        load: true
         push: ${{ 'true' == inputs.push }}
         outputs: ${{ case( 'true' == inputs.push, 'type=image,push-by-digest=true,name-canonical=true,push=true', '' ) }}
         cache-from: |
