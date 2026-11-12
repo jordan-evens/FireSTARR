@@ -162,7 +162,7 @@ jobs:
     - name: Upload test outputs artifact
       uses: actions/upload-artifact@v7
       with:
-        name: 'test-outputs-${{ env.RELEASE_ARCHIVE }}'
+        name: test-outputs
         path: test/output/reference
         archive: true
         compression-level: 9
@@ -258,7 +258,7 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v8
         with:
-          name: 'test-outputs-*'
+          name: test-outputs
           path: ./compare
           merge-multiple: true
           skip-decompress: true
