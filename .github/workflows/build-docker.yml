@@ -149,12 +149,22 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           image-missing: ${{ 'true' == steps.check-missing.outputs.image-missing }}
 
+      - uses: ./.github/actions/docker-build-image
+        id: build-firestarr-local
+        with:
+          target: firestarr
+          registry: ${{ env.REGISTRY }}
+          package-name: ''
+          platform: ${{ matrix.platform }}
+          push: false
+          image-missing: ${{ 'true' == steps.check-missing.outputs.image-missing }}
+
       - name: Run docker test
         shell: bash
         run: |
           docker image ls
           rm -rf ./test/output/reference
-          IMAGE=firestarr
+          IMAGE=${{ steps.build-firestarr-local.outputs.package }}
           # calling compose should use cached build but tag it?
           docker compose build ${IMAGE}
           MOUNTS="-v./settings.ini:/appl/firestarr/settings.ini -v./test:/appl/firestarr/test"

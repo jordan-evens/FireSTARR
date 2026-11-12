@@ -87,7 +87,11 @@ runs:
       run: |
         registry=${{ inputs.registry }}
         repo=${registry}/${GITHUB_REPOSITORY@L}
-        package=${repo}/${{ inputs.package-name }}
+        if [[ "" == "${{ inputs.package-name}}" ]]; then
+          package=${{inputs.target}}
+        else
+          package=${repo}/${{ inputs.package-name }}
+        fi
         registry_cache=${repo}/cache
         cached=${registry_cache}:${{ github.sha }}${{ inputs.suffix }}
         echo "PACKAGE=${package}" >> $GITHUB_ENV
