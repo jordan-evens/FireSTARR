@@ -260,7 +260,7 @@ jobs:
         with:
           pattern: test-outputs-*
           path: ./compare
-          merge-multiple: false
+          merge-multiple: true
           skip-decompress: true
 
       - name: List artifacts
