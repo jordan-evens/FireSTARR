@@ -120,9 +120,7 @@ runs:
         target: ${{ inputs.target }}
         platforms: linux/${{ inputs.platform }}
         labels: ${{ steps.meta.outputs.labels }}
-        tags: |
-          ${{ inputs.target }}
-          ${{ env.PACKAGE }}
+        tags: ${{ env.PACKAGE }}
         load: true
         push: ${{ 'true' == inputs.push }}
         outputs: ${{ case( 'true' == inputs.push, 'type=image,push-by-digest=true,name-canonical=true,push=true', '' ) }}
@@ -152,6 +150,28 @@ runs:
         path: ${{ runner.temp }}/digests-${{ inputs.target }}/*
         if-no-files-found: error
         retention-days: 1
+
+    - name: ${{ inputs.target }} - Build local image
+      id: build-local
+      uses: docker/build-push-action@v7
+      with:
+        context: .
+        file: .docker/Dockerfile
+        target: ${{ inputs.target }}
+        platforms: linux/${{ inputs.platform }}
+        labels: ${{ steps.meta.outputs.labels }}
+        tags: ${{ inputs.target }}
+        load: true
+        push: false
+        cache-from: |
+          ${{ format( 'type=registry,ref={0}:{1}-{2}', env.REGISTRY_CACHE, env.PLATFORM_PAIR, github.sha ) }}
+          ${{ format( 'type=registry,ref={0}:{1}-{2}', env.REGISTRY_CACHE, env.PLATFORM_PAIR, env.CACHE_REF ) }}
+          ${{ format( 'type=registry,ref={0}:{1}', env.REGISTRY_CACHE, env.PLATFORM_PAIR ) }}
+          ${{ format( 'type=registry,ref={0}', env.REGISTRY_CACHE ) }}
+        cache-to: |
+          ${{ case( 'true' == inputs.push, format( 'type=registry,mode=max,ref={0}:{1}-{2}', env.REGISTRY_CACHE, env.PLATFORM_PAIR, github.sha ), '' ) }}
+          ${{ case( 'true' == inputs.push, format( 'type=registry,mode=max,ref={0}:{1}-{2}', env.REGISTRY_CACHE, env.PLATFORM_PAIR, env.CACHE_REF ), '' ) }}
+          ${{ case( 'true' == inputs.push, format( 'type=registry,mode=max,ref={0}:{1}', env.REGISTRY_CACHE, env.PLATFORM_PAIR), '' ) }}
 
     - name: Set outputs
       id: output
