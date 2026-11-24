@@ -263,15 +263,16 @@ void Scenario::evaluate(const Event& event)
   }
 }
 using namespace fuel;
-SurvivalMap make_survival(const FireWeather& fire_wx)
+SurvivalMap make_survival(const ptr<const FireWeather> fire_wx)
 {
   static const auto& settings = fs::settings::instance();
   static const auto& lookup = settings.fuel_lookup.lookup();
   const auto& used_fuels = lookup.usedFuels();
-  const auto& weather_by_hour_by_day = fire_wx.getWeather();
-  const auto min_date = fire_wx.minDate();
-  const auto max_date = fire_wx.maxDate();
+  const auto& weather_by_hour_by_day = fire_wx->getWeather();
+  const auto min_date = fire_wx->minDate();
+  const auto max_date = fire_wx->maxDate();
   SurvivalMap result{};
+  result[fire_wx] = {};
   for (const auto& in_fuel : used_fuels)
   {
     const auto code = FuelType::safeCode(in_fuel);
@@ -290,7 +291,7 @@ SurvivalMap make_survival(const FireWeather& fire_wx)
             static_cast<float>(wx.isNull() ? 0.0 : (in_fuel->survivalProbability(wx)));
         }
       }
-      result.at(code) = std::move(by_fuel);
+      result[fire_wx].at(code) = std::move(by_fuel);
     }
   }
   return result;
@@ -316,7 +317,7 @@ Scenario::Scenario(
     points_log_(
       LogPoints{model_->outputDirectory(), settings::instance().save_points, id_, start_time_}
     ),
-    survival_probability_{make_survival(*weather_)}
+    survival_probability_{make_survival(weather_)}
 {
   const auto wx = weather_->at(start_time_);
   logging::check_fatal(
