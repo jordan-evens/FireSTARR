@@ -24,7 +24,8 @@ struct IObserver_deleter
   void operator()(IObserver*) const;
 };
 // use an array instead of a map since number of values is so small and access should be faster
-using SurvivalMap = array<vector<float>, NUMBER_OF_FUELS>;
+using SurvivalByFuel = array<vector<float>, NUMBER_OF_FUELS>;
+using SurvivalMap = map<const ptr<const FireWeather>, SurvivalByFuel>;
 /**
  * \brief A single Scenario in an Iteration using a specific FireWeather stream.
  */
@@ -286,10 +287,14 @@ public:
    * \return Whether or not this Scenario has run already
    */
   [[nodiscard]] bool ran() const noexcept;
-  ThresholdSize survivalProbability(const DurationSize time, const FuelCodeSize& in_fuel) const
+  ThresholdSize survivalProbability(
+    const ptr<const FireWeather> weather,
+    const DurationSize time,
+    const FuelCodeSize& in_fuel
+  ) const
   {
     return static_cast<ThresholdSize>(
-      survival_probability_.at(in_fuel).at(time_index(time, weather_->minDate()))
+      survival_probability_.at(weather).at(in_fuel).at(time_index(time, weather->minDate()))
     );
   }
   /**
@@ -332,7 +337,7 @@ public:
         return true;
       }
       // we can look by fuel type because the entire landscape shares the weather
-      return extinctionThreshold(time) < survivalProbability(time, cell.fuelCode());
+      return extinctionThreshold(time) < survivalProbability(fire_wx, time, cell.fuelCode());
     }
     catch (const std::out_of_range&)
     {
