@@ -10,19 +10,20 @@ class Scenario;
 class SpreadCache
 {
 public:
-  using SpreadCacheMap = map<SpreadKey, SpreadInfo>;
+  using SpreadCacheKey = SpreadKey;
+  using SpreadCacheMap = map<SpreadCacheKey, SpreadInfo>;
   SpreadCache() noexcept = default;
   SpreadCache(const SpreadCache& rhs) noexcept = delete;
   SpreadCache(SpreadCache&& rhs) noexcept = default;
   SpreadCache& operator=(const SpreadCache& rhs) noexcept = delete;
   SpreadCache& operator=(SpreadCache&& rhs) noexcept = default;
   ptr<const SpreadInfo> add_spread(
-    const SpreadKey& key,
     ptr<const Scenario> scenario,
+    const XYIdx& loc,
     DurationSize time
   ) noexcept;
-  MathSize maxIntensity(const SpreadKey& key) const noexcept;
-  const OffsetSet& offsets(const SpreadKey& key) const noexcept;
+  MathSize maxIntensity(const SpreadCacheKey& key) const noexcept;
+  const OffsetSet& offsets(const SpreadCacheKey& key) const noexcept;
 
 private:
   /**

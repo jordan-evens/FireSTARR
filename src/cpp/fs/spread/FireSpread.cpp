@@ -214,6 +214,7 @@ static SpreadKey make_key(const SlopeSize slope, const AspectSize aspect, const 
 }
 [[nodiscard]] _Float64 SpreadInfo::foliarMoisture() const { return foliarMoisture(nd_); }
 [[nodiscard]] bool SpreadInfo::isInvalid() const { return INVALID_ROS == head_ros_; }
+[[nodiscard]] SpreadKey SpreadInfo::spreadKey() const { return key_; };
 SpreadInfo::SpreadInfo(
   const YearSize year,
   const int month,

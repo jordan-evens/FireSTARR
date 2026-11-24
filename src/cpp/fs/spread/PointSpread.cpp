@@ -26,10 +26,9 @@ DurationSize do_spread(
   while (it_cells != lhs.end())
   {
     auto& [loc, pts] = *it_cells;
-    const Cell for_cell = scenario->cell(loc);
-    const auto key = for_cell.key();
     // any cell that has the same fuel, slope, and aspect has the same spread
-    auto& origin = *spread_info.add_spread(key, scenario, time);
+    auto& origin = *spread_info.add_spread(scenario, loc, time);
+    const auto key = origin.spreadKey();
     // filter out things not spreading fast enough here so they get copied if they aren't
     // isNotSpreading() had better be true if ros is lower than minimum
     const auto ros = origin.headRos();

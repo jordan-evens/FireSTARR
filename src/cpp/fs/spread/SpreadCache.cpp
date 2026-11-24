@@ -13,11 +13,13 @@ static MathSize find_min_ros(const Scenario& scenario, const DurationSize time)
   return settings.deterministic ? min_ros : std::max(scenario.spreadThresholdByRos(time), min_ros);
 }
 ptr<const SpreadInfo> SpreadCache::add_spread(
-  const SpreadKey& key,
   ptr<const Scenario> scenario,
+  const XYIdx& loc,
   DurationSize time
 ) noexcept
 {
+  const Cell for_cell = scenario->cell(loc);
+  const auto key = for_cell.key();
   return &(spread_info_
              .try_emplace(
                key,

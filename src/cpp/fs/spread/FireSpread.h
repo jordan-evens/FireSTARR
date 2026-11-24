@@ -157,6 +157,7 @@ public:
    * \return Whether or not there is no spread for given conditions
    */
   [[nodiscard]] bool isInvalid() const;
+  [[nodiscard]] SpreadKey spreadKey() const;
   SpreadInfo(
     const YearSize year,
     const int month,

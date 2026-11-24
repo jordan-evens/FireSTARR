@@ -195,12 +195,11 @@ string run_test(
   }};
   const XYIdx start_xy{static_cast<Idx>(MAX_WIDTH / 2), static_cast<Idx>(MAX_HEIGHT / 2)};
   Model model(settings.start_date.value(), output_directory, ForPoint, &env);
-  const auto start_cell = model.cell(start_xy);
   FireWeather weather{static_cast<Day>(start_date), dc, dmc, ffmc, wind};
   TestScenario scenario(&model, start_xy, ForPoint, start_date, end_date, &weather, final_sizes);
   const auto w = weather.at(start_date);
   SpreadCache spread_cache{};
-  auto& info = *spread_cache.add_spread(start_cell.key(), &scenario, start_date);
+  auto info = *spread_cache.add_spread(&scenario, start_xy, start_date);
   showSpread(info, w, fuel);
   map<DurationSize, shared_ptr<ProbabilityMap>> probabilities{};
   logging::debug("Starting simulation");
