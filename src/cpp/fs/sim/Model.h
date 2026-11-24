@@ -271,7 +271,7 @@ public:
    * \brief Set constant weather
    * \param weather FwiWeather to use as constant weather
    */
-  void setWeather(const FwiWeather& weather, const Day start_day);
+  void setWeather(const FwiWeather& weather, const Point& pt, const Day start_day);
   /**
    * \brief Read weather used for Scenarios
    * \param yesterday FwiWeather for yesterday
@@ -378,11 +378,11 @@ private:
   /**
    * \brief Map of scenario number to weather stream
    */
-  map<size_t, FireWeather> wx_{};
+  map<size_t, map<Point, FireWeather>> wx_{};
   /**
    * \brief Map of scenario number to weather stream
    */
-  map<size_t, FireWeather> wx_daily_{};
+  map<size_t, map<Point, FireWeather>> wx_daily_{};
   /**
    * \brief Cell(s) that can burn closest to start Location
    */

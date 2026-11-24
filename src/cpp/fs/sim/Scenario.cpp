@@ -1,7 +1,9 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "../stdafx.h"
 #include "Scenario.h"
+#include <iterator>
 #include "../fuel/FuelLookup.h"
+#include "../geo/projection.h"
 #include "../grid/BurnedData.h"
 #include "../grid/Cell.h"
 #include "../grid/IntensityMap.h"
@@ -213,12 +215,12 @@ void Scenario::evaluate(const Event& event)
       FuelType::safeName(check_fuel(for_cell)),
       event.time
     );
-    if (!survives(event.time, for_cell, event.time_at_location))
+    if (!survives(event.time, event.xy, for_cell, event.time_at_location))
     {
       if (should_log(logging::level::info))
       {
         // HACK: show daily values since that's what survival uses
-        const auto wx = weather_daily(event.time);
+        const auto wx = weather_daily(event.xy, event.time);
         logging::info(
           "{:s} Didn't survive ignition in {:s} with weather {:f}, {:f}",
           log_prefix_,
@@ -263,44 +265,123 @@ void Scenario::evaluate(const Event& event)
   }
 }
 using namespace fuel;
-SurvivalMap make_survival(const ptr<const FireWeather> fire_wx)
+SurvivalMap make_survival(const FireWeatherGrid& fire_wx_grid)
 {
   static const auto& settings = fs::settings::instance();
   static const auto& lookup = settings.fuel_lookup.lookup();
   const auto& used_fuels = lookup.usedFuels();
-  const auto& weather_by_hour_by_day = fire_wx->getWeather();
-  const auto min_date = fire_wx->minDate();
-  const auto max_date = fire_wx->maxDate();
   SurvivalMap result{};
-  result[fire_wx] = {};
-  for (const auto& in_fuel : used_fuels)
+  for (const auto fire_wx : fire_wx_grid.data)
   {
-    const auto code = FuelType::safeCode(in_fuel);
-    if (nullptr != in_fuel && INVALID_FUEL_CODE != code)
+    // HACK: try_emplace will only succeed for unique values
+    auto e = result.try_emplace(fire_wx, SurvivalByFuel{});
+    if (e.second)
     {
-      auto by_fuel = vector<float>{};
-      by_fuel.resize((static_cast<size_t>(max_date) - min_date + 2) * DAY_HOURS);
-      // calculate the entire stream for this fuel
-      for (auto day = min_date; day <= max_date; ++day)
+      const auto& weather_by_hour_by_day = fire_wx->getWeather();
+      const auto min_date = fire_wx->minDate();
+      const auto max_date = fire_wx->maxDate();
+      for (const auto& in_fuel : used_fuels)
       {
-        for (auto h = 0; h < DAY_HOURS; ++h)
+        const auto code = FuelType::safeCode(in_fuel);
+        if (nullptr != in_fuel && INVALID_FUEL_CODE != code)
         {
-          const auto wx = weather_by_hour_by_day.at(time_index(day, h, min_date));
-          const auto i = time_index(day, h, min_date);
-          by_fuel.at(i) =
-            static_cast<float>(wx.isNull() ? 0.0 : (in_fuel->survivalProbability(wx)));
+          auto by_fuel = vector<float>{};
+          by_fuel.resize((static_cast<size_t>(max_date) - min_date + 2) * DAY_HOURS);
+          // calculate the entire stream for this fuel
+          for (auto day = min_date; day <= max_date; ++day)
+          {
+            for (auto h = 0; h < DAY_HOURS; ++h)
+            {
+              const auto wx = weather_by_hour_by_day.at(time_index(day, h, min_date));
+              const auto i = time_index(day, h, min_date);
+              by_fuel.at(i) =
+                static_cast<float>(wx.isNull() ? 0.0 : (in_fuel->survivalProbability(wx)));
+            }
+          }
+          e.first->second.at(code) = std::move(by_fuel);
         }
       }
-      result[fire_wx].at(code) = std::move(by_fuel);
     }
   }
   return result;
 }
+FireWeatherGrid create_wx_grid(
+  Model* model,
+  const ptr<const map<Point, FireWeather>> weather
+) noexcept
+{
+  const auto& env = model->environment();
+  map<XYPos, ptr<const FireWeather>> by_position{};
+  map<XYPos, size_t> used_by_position{};
+  for (auto& [pt, wx] : *weather)
+  {
+    auto coords = env.findCoordinates(pt, false).value();
+    XYPos xy{XPos{coords.x + coords.x_sub / 1000.0}, YPos{coords.y + coords.y_sub / 1000.0}};
+    logging::note("{} becomes ({}, {})", pt, xy.x.value, xy.y.value);
+    by_position.emplace(xy, &wx);
+    used_by_position.emplace(xy, 0);
+  }
+  vector<ptr<const FireWeather>> values{static_cast<size_t>(env.height() * env.width())};
+  for (Idx y = 0; y < env.height(); ++y)
+  {
+    for (Idx x = 0; x < env.width(); ++x)
+    {
+      const XYIdx loc{x, y};
+      ptr<const FireWeather> closest = nullptr;
+      DistanceSize best = std::numeric_limits<MathSize>::max();
+      for (auto& [xy, wx] : by_position)
+      {
+        // determine closest point to center of this cell
+        auto cur = fs::distance(
+          static_cast<DistanceSize>(xy.x.value),
+          static_cast<DistanceSize>(xy.y.value),
+          // static_cast<DistanceSize>((x + CELL_CENTER) * env.cellSize() + env.xllcorner()),
+          // static_cast<DistanceSize>((y + CELL_CENTER) * env.cellSize() + env.yllcorner())
+          static_cast<DistanceSize>(x + CELL_CENTER),
+          static_cast<DistanceSize>(y + CELL_CENTER)
+        );
+        logging::verbose("({}, {}) distance to ({}, {}) is {}", x, y, xy.x.value, xy.y.value, cur);
+        if (cur < best)
+        {
+          logging::debug(
+            "({}, {}) closest distance to ({}, {}) is {}", x, y, xy.x.value, xy.y.value, cur
+          );
+          best = cur;
+          closest = wx;
+          ++used_by_position[xy];
+        }
+      }
+      values.at(to_index(loc)) = closest;
+    }
+  }
+  for (auto& [xy, i] : used_by_position)
+  {
+    auto xy_full = XYPos{
+      XPos{env.xllcorner() + as_value(xy.x) * env.cellSize()},
+      YPos{env.yllcorner() + as_value(xy.y) * env.cellSize()}
+    };
+    auto pt = to_lat_long(env.proj4(), xy_full);
+    logging::note("{} [({}, {})] used {} times", pt, xy.x.value, xy.y.value, i);
+  }
+  return FireWeatherGrid(
+    env.cellSize(),
+    env.width(),
+    env.height(),
+    0,
+    nullptr,
+    env.xllcorner(),
+    env.yllcorner(),
+    env.xurcorner(),
+    env.yurcorner(),
+    string(env.proj4()),
+    std::move(values)
+  );
+}
 Scenario::Scenario(
   Model* model,
   const size_t id,
-  const ptr<const FireWeather> weather,
-  const ptr<const FireWeather> weather_daily,
+  const ptr<const map<Point, FireWeather>> weather,
+  const ptr<const map<Point, FireWeather>> weather_daily,
   const DurationSize start_time,
   const shared_ptr<Perimeter>& perimeter,
   const XYIdx& start_cell,
@@ -308,25 +389,51 @@ Scenario::Scenario(
   const Day start_day,
   const Day last_date
 )
+  : Scenario(
+      model,
+      id,
+      create_wx_grid(model, weather),
+      create_wx_grid(model, weather_daily),
+      start_time,
+      perimeter,
+      start_cell,
+      start_point,
+      start_day,
+      last_date
+    )
+{ }
+Scenario::Scenario(
+  Model* model,
+  size_t id,
+  FireWeatherGrid&& weather,
+  FireWeatherGrid&& weather_daily,
+  DurationSize start_time,
+  const shared_ptr<Perimeter>& perimeter,
+  const XYIdx& start_cell,
+  StartPoint start_point,
+  Day start_day,
+  Day last_date
+)
   : current_time_(start_time), unburnable_{}, intensity_(nullptr), perimeter_(perimeter),
-    max_ros_(0), start_xy_(start_cell), weather_(weather), weather_daily_(weather_daily),
-    model_(model), probabilities_(nullptr), final_sizes_(nullptr),
-    start_point_(std::move(start_point)), id_(id), start_time_(start_time),
-    last_save_(weather_->minDate()), simulation_(-1), start_day_(start_day), last_date_(last_date),
-    ran_(false), step_(0),
+    max_ros_(0), start_xy_(start_cell), weather_(std::move(weather)),
+    weather_daily_(std::move(weather_daily)), model_(model), probabilities_(nullptr),
+    final_sizes_(nullptr), start_point_(std::move(start_point)), id_(id), start_time_(start_time),
+    simulation_(-1), start_day_(start_day), last_date_(last_date), ran_(false), step_(0),
     points_log_(
       LogPoints{model_->outputDirectory(), settings::instance().save_points, id_, start_time_}
     ),
     survival_probability_{make_survival(weather_)}
 {
-  const auto wx = weather_->at(start_time_);
+  const auto* wx_zero = weather_.at(XYIdx{XIdx{0}, YIdx{0}});
+  last_save_ = wx_zero->minDate();
+  const auto wx = wx_zero->at(start_time_);
   logging::check_fatal(
     wx.isNull(), "No weather for start time {:s}", make_timestamp(model->year(), start_time_)
   );
   const auto saves = settings::instance().output_date_offsets.offsets();
   const auto last_save = start_day_ + saves[saves.size() - 1];
   logging::check_fatal(
-    last_save > weather_->maxDate(),
+    last_save > wx_zero->maxDate(),
     "No weather for last save time {:s}",
     make_timestamp(model->year(), last_save)
   );
@@ -608,6 +715,12 @@ Scenario* Scenario::run(map<DurationSize, shared_ptr<ProbabilityMap>>* probabili
   {
     logging::warning("{:s} Tried to spread out of bounds {:d} times", log_prefix_, oob_spread_);
   }
+  std::ignore = weather_.saveToFile<MathSize>(
+    model().outputDirectory(),
+    "wd",
+    [&](const ptr<const FireWeather> w) { return w->at(start_time_).wind().direction.asDegrees(); },
+    Wind::Zero().direction.asDegrees()
+  );
   return this;
 }
 void Scenario::scheduleFireSpread(const Event& event)
@@ -616,8 +729,8 @@ void Scenario::scheduleFireSpread(const Event& event)
   static const auto& settings = fs::settings::instance();
   const auto time = event.time;
   const auto this_time = time_index(time);
-  const auto wx = settings.is_surface() ? model_->yesterday() : weather(time);
-  const auto wx_daily = settings.is_surface() ? model_->yesterday() : weather_daily(time);
+  const auto wx = settings.is_surface() ? model_->yesterday() : weather(event.xy, time);
+  const auto wx_daily = settings.is_surface() ? model_->yesterday() : weather_daily(event.xy, time);
   current_time_ = time;
   log_prefix_ = get_log_prefix(*this);
   logging::check_fatal(wx.isNull(), "No weather available for time {:f}", time);
@@ -655,7 +768,7 @@ void Scenario::scheduleFireSpread(const Event& event)
   do_each(points_.cells_, [&](CellPointsMap::map_value& kv) {
     auto& [loc, pts] = kv;
     const auto for_cell = cell(loc);
-    const auto wx = weather(time);
+    const auto wx = weather(loc, time);
     // FIX: somehow things with no spread get in here and not checking produces different results
     const auto key = for_cell.key();
     const auto k = std::pair{key, wx};
@@ -677,7 +790,7 @@ void Scenario::scheduleFireSpread(const Event& event)
     }
     if (!unburnable_.at(loc)
         // && canBurn(for_cell)
-        && ((survives(new_time, for_cell, new_time - arrival_[loc]) && !isSurrounded(loc))))
+        && ((survives(new_time, loc, for_cell, new_time - arrival_[loc]) && !isSurrounded(loc))))
     {
       points_log_.log(step_, STAGE_CONDENSE, new_time, pts);
       // CHECK: this is already pointed at the right thing, no?

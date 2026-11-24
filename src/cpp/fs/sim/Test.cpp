@@ -56,7 +56,7 @@ public:
     const StartPoint& start_point,
     const int start_date,
     const DurationSize end_date,
-    const ptr<const FireWeather> weather,
+    const ptr<const map<Point, FireWeather>> weather,
     ptr<SafeVector> final_sizes
   )
     : Scenario(
@@ -196,7 +196,13 @@ string run_test(
   const XYIdx start_xy{static_cast<Idx>(MAX_WIDTH / 2), static_cast<Idx>(MAX_HEIGHT / 2)};
   Model model(settings.start_date.value(), output_directory, ForPoint, &env);
   FireWeather weather{static_cast<Day>(start_date), dc, dmc, ffmc, wind};
-  TestScenario scenario(&model, start_xy, ForPoint, start_date, end_date, &weather, final_sizes);
+  map<size_t, map<Point, FireWeather>> wx{};
+  auto& wx_by_point = wx.emplace(0, map<Point, FireWeather>{}).first->second;
+  const Point pt = ForPoint.asPoint();
+  wx_by_point.emplace(pt, FireWeather{start_date, dc, dmc, ffmc, wind});
+  TestScenario scenario(
+    &model, start_xy, ForPoint, start_date, end_date, &wx_by_point, final_sizes
+  );
   const auto w = weather.at(start_date);
   SpreadCache spread_cache{};
   auto info = *spread_cache.add_spread(&scenario, start_xy, start_date);

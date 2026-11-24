@@ -26,6 +26,7 @@ struct IObserver_deleter
 // use an array instead of a map since number of values is so small and access should be faster
 using SurvivalByFuel = array<vector<float>, NUMBER_OF_FUELS>;
 using SurvivalMap = map<const ptr<const FireWeather>, SurvivalByFuel>;
+using FireWeatherGrid = ConstantGrid<ptr<const FireWeather>, int>;
 /**
  * \brief A single Scenario in an Iteration using a specific FireWeather stream.
  */
@@ -146,10 +147,15 @@ public:
    * \param time Time to get weather for (decimal days)
    * \return FwiWeather for given time
    */
-  [[nodiscard]] FwiWeather weather(const DurationSize time) const { return weather_->at(time); }
-  [[nodiscard]] FwiWeather weather_daily(const DurationSize time) const
+  [[nodiscard]] FwiWeather weather(const XYIdx xy, const DurationSize time) const
   {
-    return weather_daily_->at(time);
+    auto w = weather_.at(xy)->at(time);
+    logging::verbose("Using wx with wind {}@{}", w.wind().speed.value, w.wind().direction.value);
+    return w;
+  }
+  [[nodiscard]] FwiWeather weather_daily(const XYIdx xy, const DurationSize time) const
+  {
+    return weather_daily_.at(xy)->at(time);
   }
   /**
    * \brief Difference between date and the date of minimum foliar moisture content
@@ -306,6 +312,7 @@ public:
    */
   [[nodiscard]] bool survives(
     const DurationSize time,
+    const XYIdx& xy,
     const Cell& cell,
     const DurationSize time_at_location
   ) const
@@ -319,7 +326,7 @@ public:
     }
     try
     {
-      const auto fire_wx = weather_;
+      const auto fire_wx = weather_.at(xy);
       const auto wx = fire_wx->at(time);
       // use Mike's table
       // days at location     equivalent DMC
@@ -393,8 +400,20 @@ public:
   Scenario(
     Model* model,
     size_t id,
-    const ptr<const FireWeather> weather,
-    const ptr<const FireWeather> weather_daily,
+    const ptr<const map<Point, FireWeather>> weather,
+    const ptr<const map<Point, FireWeather>> weather_daily,
+    DurationSize start_time,
+    const shared_ptr<Perimeter>& perimeter,
+    const XYIdx& start_xy,
+    StartPoint start_point,
+    Day start_day,
+    Day last_date
+  );
+  Scenario(
+    Model* model,
+    size_t id,
+    FireWeatherGrid&& weather,
+    FireWeatherGrid&& weather_daily,
     DurationSize start_time,
     const shared_ptr<Perimeter>& perimeter,
     const XYIdx& start_xy,
@@ -460,11 +479,11 @@ protected:
   /**
    * \brief Hourly weather to use for this Scenario
    */
-  ptr<const FireWeather> weather_{nullptr};
+  FireWeatherGrid weather_;
   /**
    * \brief Weather stream to use for spread and extinction probability
    */
-  ptr<const FireWeather> weather_daily_{nullptr};
+  FireWeatherGrid weather_daily_;
   /**
    * \brief Model this Scenario is being run in
    */

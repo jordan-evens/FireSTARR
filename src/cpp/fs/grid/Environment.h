@@ -81,6 +81,10 @@ public:
   [[nodiscard]] constexpr string_view proj4() const { return cells_.proj4(); }
   [[nodiscard]] constexpr Idx height() const { return cells_.height(); }
   [[nodiscard]] constexpr Idx width() const { return cells_.width(); }
+  [[nodiscard]] constexpr MathSize xllcorner() const { return cells_.xllcorner(); }
+  [[nodiscard]] constexpr MathSize yllcorner() const { return cells_.yllcorner(); }
+  [[nodiscard]] constexpr MathSize xurcorner() const { return cells_.xurcorner(); }
+  [[nodiscard]] constexpr MathSize yurcorner() const { return cells_.yurcorner(); }
   /**
    * \brief Cell width and height (m)
    * \return Cell width and height (m)

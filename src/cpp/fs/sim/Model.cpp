@@ -53,17 +53,19 @@ Model::Model(
     );
   }
 }
-void Model::setWeather(const FwiWeather& weather, const Day start_day)
+void Model::setWeather(const FwiWeather& weather, const Point& pt, const Day start_day)
 {
   yesterday_ = weather;
-  wx_.emplace(
-    0,
+  auto& w = wx_.emplace(0, map<Point, FireWeather>{}).first->second;
+  w.emplace(
+    pt,
     FireWeather{
       static_cast<Day>(start_day - 1), weather.dc(), weather.dmc(), weather.ffmc(), weather.wind()
     }
   );
-  wx_daily_.emplace(
-    0,
+  auto& w_daily = wx_daily_.emplace(0, map<Point, FireWeather>{}).first->second;
+  w_daily.emplace(
+    pt,
     FireWeather{
       static_cast<Day>(start_day - 1), weather.dc(), weather.dmc(), weather.ffmc(), weather.wind()
     }
@@ -75,8 +77,8 @@ void Model::readWeather(
   const string& filename
 )
 {
-  map<size_t, vector<FwiWeather>> wx{};
-  map<size_t, map<Day, FwiWeather>> wx_daily{};
+  map<size_t, map<Point, vector<FwiWeather>>> wx{};
+  map<size_t, map<Point, map<Day, FwiWeather>>> wx_daily{};
   map<Day, struct tm> dates{};
   Day min_date = numeric_limits<Day>::max();
   Day max_date = numeric_limits<Day>::min();
@@ -100,14 +102,20 @@ void Model::readWeather(
     str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
     str.erase(std::remove(str.begin(), str.end(), '\r'), str.end());
     constexpr auto expected_header = "Scenario,Date,PREC,TEMP,RH,WS,WD,FFMC,DMC,DC,ISI,BUI,FWI";
+    constexpr auto expected_header_coords =
+      "Scenario,latitude,longitude,Date,PREC,TEMP,RH,WS,WD,FFMC,DMC,DC,ISI,BUI,FWI";
     const auto expected_header_lower = tolower(expected_header);
+    const auto expected_header_coords_lower = tolower(expected_header_coords);
     const auto input_header_lower = tolower(str);
+    const auto is_with_coords = expected_header_coords_lower == input_header_lower;
     logging::check_fatal(
-      expected_header_lower != input_header_lower,
-      "Input CSV must have columns in this order:\n'{:s}'\n but got:\n'{:s}'",
+      expected_header_lower != input_header_lower && !is_with_coords,
+      "Input CSV must have columns:\n\t'{:s}'\n\t\tor\n\t'{:s}'\n but got:\n'{:s}'",
       expected_header,
+      expected_header_coords,
       str
     );
+    Point pt_cur = start_point.asPoint();
     auto prev = &yesterday;
     // HACK: adding to original object if we don't do this?
     auto apcp_24h = as_value(yesterday.prec());
@@ -134,21 +142,40 @@ void Model::readWeather(
         if (wx.find(cur) == wx.end())
         {
           logging::debug("Loading scenario {:d}...", cur);
-          wx.emplace(cur, vector<FwiWeather>{});
+          wx.emplace(cur, map<Point, vector<FwiWeather>>{});
           prev_time = std::numeric_limits<time_t>::min();
           logging::check_fatal(
             wx_daily.find(cur) != wx_daily.end(),
             "Somehow have daily weather for scenario {:d} before hourly weather",
             cur
           );
-          wx_daily.emplace(cur, map<Day, FwiWeather>());
+          wx_daily.emplace(cur, map<Point, map<Day, FwiWeather>>());
           prev = &yesterday;
           logging::extensive(
             "Resetting new scenario precip to {:f} from {:f}", as_value(yesterday.prec()), apcp_24h
           );
           apcp_24h = as_value(yesterday.prec());
         }
-        auto& s = wx.at(cur);
+        map<Point, vector<FwiWeather>>& by_point = wx.at(cur);
+        if (is_with_coords)
+        {
+          // latitude
+          getline(iss, str, ',');
+          logging::extensive("latitude is {:s}", str);
+          const MathSize latitude{stod(str)};
+          // longitude
+          getline(iss, str, ',');
+          logging::extensive("longitude is {:s}", str);
+          const MathSize longitude{stod(str)};
+          const Point pt{latitude, longitude};
+          if (pt_cur != pt)
+          {
+            logging::debug("Reading scenario {} for coordinates {} for now", cur, pt);
+            prev_time = std::numeric_limits<time_t>::min();
+          }
+          pt_cur = pt;
+        }
+        vector<FwiWeather>& s = by_point.try_emplace(pt_cur, vector<FwiWeather>{}).first->second;
         struct tm t{};
         read_date(&iss, &str, &t);
         year_ = t.tm_year + TM_YEAR_OFFSET;
@@ -197,9 +224,12 @@ void Model::readWeather(
         if (12 == t.tm_hour)
         {
           // we just hit noon on a new day, so add the daily value
-          auto& s_daily = wx_daily.at(cur);
+          auto& by_point_daily = wx_daily.at(cur);
+          auto& s_daily = by_point_daily.try_emplace(pt_cur, map<Day, FwiWeather>{}).first->second;
           const auto day = static_cast<Day>(t.tm_yday);
-          logging::check_fatal(s_daily.find(day) != s_daily.end(), "Day already exists");
+          logging::check_fatal(
+            s_daily.find(day) != s_daily.end(), "Day already exists for station {}", pt_cur
+          );
           const auto month = t.tm_mon + 1;
           s_daily.emplace(
             day,
@@ -253,19 +283,20 @@ void Model::readWeather(
     in.close();
   }
   // loop through and try to find duplicates
-  for (const auto& kv : wx)
+  for (auto& [k, s] : wx)
   {
-    const auto k = kv.first;
-    const auto& s = kv.second;
-    // FIX: this is just looking for duplicate scenario ids, not weather?
-    if (wx_.find(k) == wx_.end())
+    auto& by_scenario = wx_.try_emplace(k, map<Point, FireWeather>{}).first->second;
+    auto& by_scenario_daily = wx_daily_.try_emplace(k, map<Point, FireWeather>{}).first->second;
+    wx_.emplace(k, map<Point, FireWeather>{});
+    for (auto& [pt_cur, v] : s)
     {
-      wx_.emplace(k, FireWeather{min_date, max_date, s});
+      logging::note("Adding weather for {}", pt_cur);
+      by_scenario.emplace(pt_cur, FireWeather{min_date, max_date, v});
       // calculate daily indices
-      auto& s_daily = wx_daily.at(k);
+      auto& s_daily = wx_daily.at(k).at(pt_cur);
       // HACK: set yesterday to match today
       s_daily.emplace(min_date - 1, s_daily.at(min_date));
-      wx_daily_.emplace(k, FireWeather{s_daily});
+      by_scenario_daily.emplace(pt_cur, FireWeather{s_daily});
     }
   }
 }
@@ -1248,7 +1279,7 @@ int Model::runScenarios(
   if (settings.is_surface())
   {
     // yesterday should have constants to use
-    model.setWeather(yesterday, start_day);
+    model.setWeather(yesterday, start_point.asPoint(), start_day);
     model.year_ = start_time.tm_year + 1900;
   }
   else
@@ -1258,7 +1289,7 @@ int Model::runScenarios(
     {
       exit(logging::fatal("No weather provided"));
     }
-    const auto& w = model.wx_.begin()->second;
+    const auto& w = model.wx_.begin()->second.begin()->second;
     logging::debug("Have weather from day {:d} to {:d}", w.minDate(), w.maxDate());
     const auto numDays = (w.maxDate() - w.minDate() + 1);
     const auto needDays = settings.output_date_offsets.max();

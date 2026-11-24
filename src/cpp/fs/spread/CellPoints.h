@@ -116,6 +116,19 @@ static inline const SpreadData& find_better(
   }
   return lhs;
 }
+static inline constexpr DistanceSize distance(const DistanceSize x2, const DistanceSize y2) noexcept
+{
+  return x2 * x2 + y2 * y2;
+}
+static inline constexpr DistanceSize distance(
+  const DistanceSize x0,
+  const DistanceSize y0,
+  const DistanceSize x1,
+  const DistanceSize y1
+) noexcept
+{
+  return fs::distance(x0 - x1, y0 - y1);
+}
 /**
  * Points in a cell furthest in each direction
  */
@@ -130,29 +143,13 @@ private:
     return r;
   }
   static inline constexpr DistanceSize distance(
-    const DistanceSize x2,
-    const DistanceSize y2
-  ) noexcept
-  {
-    return x2 * x2 + y2 * y2;
-  }
-  static inline constexpr DistanceSize distance(
-    const DistanceSize x0,
-    const DistanceSize y0,
-    const DistanceSize x1,
-    const DistanceSize y1
-  ) noexcept
-  {
-    return distance(x0 - x1, y0 - y1);
-  }
-  static inline constexpr DistanceSize distance(
     const XYIdx& cell_x_y,
     const XYPos& xy,
     const DistanceSize x1,
     const DistanceSize y1
   ) noexcept
   {
-    return distance(
+    return fs::distance(
       static_cast<DistanceSize>(as_value(xy.x) - as_value(cell_x_y.x)),
       static_cast<DistanceSize>(as_value(xy.y) - as_value(cell_x_y.y)),
       x1,
@@ -165,7 +162,7 @@ private:
     const size_t i
   ) noexcept
   {
-    return distance(
+    return fs::distance(
       static_cast<DistanceSize>(as_value(xy.x) - as_value(cell_x_y.x)),
       static_cast<DistanceSize>(as_value(xy.y) - as_value(cell_x_y.y)),
       POINTS_OUTER[i].first,
@@ -263,7 +260,7 @@ private:
     // even if !consider_for_spread, update points
     for (size_t i = 0; i < closer.size(); ++i)
     {
-      const auto d = distance(x0, y0, POINTS_OUTER[i].first, POINTS_OUTER[i].second);
+      const auto d = fs::distance(x0, y0, POINTS_OUTER[i].first, POINTS_OUTER[i].second);
       auto& p_d = cell_pts.distances[i];
       auto& p_p = cell_pts.points[i];
       auto& p_a = directions[i];

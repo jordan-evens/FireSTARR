@@ -20,8 +20,8 @@ ptr<const SpreadInfo> SpreadCache::add_spread(
 {
   const Cell for_cell = scenario->cell(loc);
   const auto key = for_cell.key();
-  const auto wx = scenario->weather(time);
-  const auto wx_daily = scenario->weather_daily(time);
+  const auto wx = scenario->weather(loc, time);
+  const auto wx_daily = scenario->weather_daily(loc, time);
   const auto k = std::pair{key, wx};
   return &(spread_info_
              .try_emplace(

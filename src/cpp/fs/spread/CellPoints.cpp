@@ -22,7 +22,7 @@ void CellPoints::insert_basic(
   for (size_t i = 0; i < cell_pts.distances.size(); ++i)
   {
     // calculate with inner but keep XYPos
-    const auto d = distance(x0, y0, POINTS_OUTER[i].first, POINTS_OUTER[i].second);
+    const auto d = fs::distance(x0, y0, POINTS_OUTER[i].first, POINTS_OUTER[i].second);
     auto& p_d = cell_pts.distances[i];
     auto& p_p = cell_pts.points[i];
     p_p = (d < p_d) ? xy : p_p;

@@ -29,6 +29,7 @@ public:
   StartPoint(StartPoint&& rhs) noexcept = default;
   StartPoint& operator=(const StartPoint& rhs) = default;
   StartPoint& operator=(StartPoint&& rhs) noexcept;
+  Point asPoint() const noexcept { return {latitude(), longitude()}; }
   /**
    * \brief Sunrise time
    * \param day Day
