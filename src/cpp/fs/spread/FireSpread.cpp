@@ -94,8 +94,8 @@ FBPValue SpreadInfo::initial(
     const auto wsv_x = spread.weather.wind().wsvX() + wse * cos(heading);
     const auto wsv_y = spread.weather.wind().wsvY() + wse * sin(heading);
     // // we know that at->raz is already set to be the wind heading
-    // const auto wsv_x = spread.weather->wind.wsvX() + wse * heading_sin;
-    // const auto wsv_y = spread.weather->wind.wsvY() + wse * heading_cos;
+    // const auto wsv_x = spread.weather.wind.wsvX() + wse * heading_sin;
+    // const auto wsv_y = spread.weather.wind.wsvY() + wse * heading_cos;
     wsv = sqrt(wsv_x * wsv_x + wsv_y * wsv_y);
     raz = (0 == wsv) ? 0 : acos(wsv_y / wsv);
     if (wsv_x < 0)

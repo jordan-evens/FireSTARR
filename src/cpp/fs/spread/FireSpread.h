@@ -268,7 +268,7 @@ public:
   /**
    * \brief FwiWeather determining spread
    */
-  FwiWeather weather{};
+  FwiWeather weather;
 
 private:
   /**

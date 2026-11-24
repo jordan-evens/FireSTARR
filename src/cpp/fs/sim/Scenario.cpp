@@ -654,9 +654,11 @@ void Scenario::scheduleFireSpread(const Event& event)
   do_each(points_.cells_, [&](CellPointsMap::map_value& kv) {
     auto& [loc, pts] = kv;
     const auto for_cell = cell(loc);
-    // ******************* CHECK THIS BECAUSE IF SOMETHING IS IN HERE SHOULD IT ALWAYS HAVE
-    // SPREAD????? *****************8
-    const auto max_intensity = spread_info_.maxIntensity(for_cell.key());
+    const auto wx = weather(time);
+    // FIX: somehow things with no spread get in here and not checking produces different results
+    const auto key = for_cell.key();
+    const auto k = std::pair{key, wx};
+    const auto max_intensity = spread_info_.maxIntensity(k);
     // HACK: just use side-effect to log and check bounds
     points_log_.log(step_, STAGE_SPREAD, new_time, pts);
     if (canBurn(loc) && max_intensity > 0)

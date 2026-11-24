@@ -2,7 +2,7 @@
 #ifndef FS_SPREAD_CACHE_H
 #define FS_SPREAD_CACHE_H
 #include "../stdafx.h"
-#include "../grid/Cell.h"
+#include "CellPoints.h"
 #include "FireSpread.h"
 namespace fs
 {
@@ -10,7 +10,7 @@ class Scenario;
 class SpreadCache
 {
 public:
-  using SpreadCacheKey = SpreadKey;
+  using SpreadCacheKey = spreading_points::key_type;
   using SpreadCacheMap = map<SpreadCacheKey, SpreadInfo>;
   SpreadCache() noexcept = default;
   SpreadCache(const SpreadCache& rhs) noexcept = delete;
@@ -22,8 +22,8 @@ public:
     const XYIdx& loc,
     DurationSize time
   ) noexcept;
-  MathSize maxIntensity(const SpreadCacheKey& key) const noexcept;
   const OffsetSet& offsets(const SpreadCacheKey& key) const noexcept;
+  MathSize maxIntensity(const SpreadCacheKey& key) const noexcept;
 
 private:
   /**

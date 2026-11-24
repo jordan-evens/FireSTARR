@@ -35,8 +35,8 @@ DurationSize do_spread(
     if (ros >= ros_min)
     {
       max_ros = max(as_value(max_ros), as_value(ros));
-      // NOTE: shouldn't be Cell if we're looking up by just Location later
-      to_spread[key].emplace_back(std::move(*it_cells));
+      const auto k = std::pair{key, origin.weather};
+      to_spread[k].emplace_back(std::move(*it_cells));
       it_cells = lhs.erase(it_cells);
 #ifdef DEBUG_CELLPOINTS
       auto& v = to_spread[key];

@@ -20,28 +20,31 @@ ptr<const SpreadInfo> SpreadCache::add_spread(
 {
   const Cell for_cell = scenario->cell(loc);
   const auto key = for_cell.key();
+  const auto wx = scenario->weather(time);
+  const auto wx_daily = scenario->weather_daily(time);
+  const auto k = std::pair{key, wx};
   return &(spread_info_
              .try_emplace(
-               key,
+               k,
                time,
                find_min_ros(*scenario, time),
                scenario->cellSize(),
                key,
                scenario->nd(time),
-               scenario->weather(time),
-               scenario->weather_daily(time)
+               wx,
+               wx_daily
              )
              .first->second);
 }
-MathSize SpreadCache::maxIntensity(const SpreadKey& key) const noexcept
+const OffsetSet& SpreadCache::offsets(const SpreadCacheKey& key) const noexcept
+{
+  return spread_info_.at(key).offsets();
+}
+MathSize SpreadCache::maxIntensity(const SpreadCacheKey& key) const noexcept
 {
   auto seek_spread = spread_info_.find(key);
   const auto max_intensity =
     (spread_info_.end() == seek_spread) ? RoundedIntensity{0} : seek_spread->second.maxIntensity();
   return max_intensity;
-}
-const OffsetSet& SpreadCache::offsets(const SpreadKey& key) const noexcept
-{
-  return spread_info_.at(key).offsets();
 }
 }

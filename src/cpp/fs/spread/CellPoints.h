@@ -391,7 +391,8 @@ private:
   };
 
 public:
-  using spreading_points = map<SpreadKey, vector<pair<XYIdx, CellPoints>>>;
+  using spreading_points =
+    map<std::pair<SpreadKey, const FwiWeather>, vector<pair<XYIdx, CellPoints>>>;
   constexpr CellPoints() noexcept = default;
   // HACK: so we can emplace with nullptr
   CellPoints(const CellPoints* rhs) noexcept
