@@ -251,9 +251,20 @@ public:
   [[nodiscard]] MathSize mcDmc() const { return impl_->mcDmc(); }
   [[nodiscard]] MathSize ffmcEffect() const { return impl_->ffmcEffect(); }
   [[nodiscard]] bool isNull() const { return nullptr == impl_; }
+  constexpr size_t hash() const noexcept
+  {
+    // HACK: hash based on pointer address since contents are unique
+    // NOLINTNEXTLINE
+    return reinterpret_cast<size_t>(impl_);
+  }
 
 private:
   ptr<const FwiWeatherImpl> impl_{nullptr};
 };
 }
+template <>
+struct std::hash<fs::FwiWeather>
+{
+  std::size_t operator()(const fs::FwiWeather& s) const noexcept { return s.hash(); }
+};
 #endif
