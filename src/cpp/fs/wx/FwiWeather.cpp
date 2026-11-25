@@ -3,6 +3,7 @@
 #include "Moisture.h"
 namespace fs
 {
+set<FwiWeatherImpl> FwiWeather::fwi_values{};
 [[nodiscard]] MathSize FwiWeatherImpl::ffmcEffect() const { return ffmc_effect(ffmc); }
 [[nodiscard]] MathSize FwiWeatherImpl::mcDmc() const { return mcDmcPct() / 100.0; }
 [[nodiscard]] MathSize FwiWeatherImpl::mcFfmc() const { return mcFfmcPct() / 100.0; }

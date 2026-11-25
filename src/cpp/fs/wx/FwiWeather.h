@@ -132,11 +132,11 @@ class FwiWeather
 {
 private:
   static mutex mutex_;
+  static set<FwiWeatherImpl> fwi_values;
   ptr<const FwiWeatherImpl> lookup(const FwiWeatherImpl& wx) noexcept
   {
     // keep unique FwiWeatherImpl and then just do pointer comparison for equality
     scoped_lock lock(mutex_);
-    static set<FwiWeatherImpl> fwi_values{};
     static const FwiWeatherImpl empty{};
     if (empty == wx)
     {
@@ -145,8 +145,19 @@ private:
     auto e = fwi_values.emplace(wx);
     return &(*e.first);
   }
+  // create without lookup
+  FwiWeather(ptr<const FwiWeatherImpl> wx) noexcept : impl_{wx} { }
 
 public:
+  static set<FwiWeather> all_weather() noexcept
+  {
+    set<FwiWeather> r{};
+    for (const auto& w : fwi_values)
+    {
+      r.emplace(FwiWeather{&w});
+    }
+    return r;
+  }
   // static FwiWeather Zero() { return FwiWeather(FwiWeatherImpl::Zero()); }
   // static FwiWeather Invalid() { return FwiWeather(FwiWeatherImpl::Invalid()); }
   const Ffmc& ffmc() const noexcept { return impl_->ffmc; }
